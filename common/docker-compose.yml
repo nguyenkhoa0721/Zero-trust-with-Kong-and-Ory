@@ -1,0 +1,49 @@
+version: '3.7'
+services:
+  postgresd:
+    image: postgres:9.6
+    ports:
+      - "25432:5432"
+    volumes:
+      - ./.docker/postgres:/var/lib/postgresql/data
+      - ./pg-init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_MULTIPLE_DATABASES=kong,kratos,keto,konga
+    networks:
+      - intranet
+ 
+  mailslurper:
+    image: oryd/mailslurper:latest-smtps
+    ports:
+      - '4436:4436'
+      - '4437:4437'
+    networks:
+      - intranet
+
+  zipkin:
+    image: openzipkin/zipkin:2
+    environment:
+      - STORAGE_TYPE=mem
+    command: --logging.level.zipkin2=DEBUG
+    ports:
+      - '9411:9411'
+    networks:
+      - intranet
+
+  app:
+    image: 'strm/helloworld-http'
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    networks:
+      - intranet
+
+volumes:
+  .docker:
+
+networks:
+  intranet:
+    external: true
+

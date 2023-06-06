@@ -1,0 +1,21 @@
+
+-
+  id: "api:hello:protected"
+  upstream:
+    preserve_host: true
+    strip_path: "/hello"
+    url: "http://app:80"
+  match:
+    url: "https://oathkeeper:4455/hello<**>"
+    methods:
+      - GET
+  authenticators:
+    - handler: cookie_session
+  mutators:
+    - handler: noop
+  authorizer:
+    handler: allow
+  errors:
+    - handler: redirect
+      config:
+        to: "https://auth.domain.com/auth/login"

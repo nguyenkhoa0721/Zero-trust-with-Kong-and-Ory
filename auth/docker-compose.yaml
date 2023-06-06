@@ -1,0 +1,67 @@
+version: '3.7'
+services:
+  kratos-migrate:
+    image: oryd/kratos:v0.13.0
+    volumes:
+      - type: bind
+        source: ./config
+        target: /etc/config/kratos
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    restart: on-failure
+    networks:
+      - intranet
+
+  kratos:
+    depends_on:
+      - kratos-migrate
+    image: oryd/kratos:v0.13.0
+    ports:
+      - '4433:4433' # public
+      - '4434:4434' # admin
+    restart: unless-stopped
+    command: serve -c /etc/config/kratos/kratos.yml --watch-courier
+    volumes:
+      - type: bind
+        source: ./config
+        target: /etc/config/kratos
+      - type: bind
+        source: ./templates
+        target: /templates
+    networks:
+      - intranet 
+
+  kratos-selfservice-ui-node:
+    image: oryd/kratos-selfservice-ui-node:v0.13.0
+    environment:
+      - KRATOS_PUBLIC_URL=http://kratos:4433/
+      - KRATOS_BROWSER_URL=https://auth.domain.com
+    networks:
+      - intranet
+    depends_on:
+      - kratos
+    ports:
+      - '3030:3000'
+    restart: on-failure
+
+  oathkeeper:
+    image: oryd/oathkeeper:v0.40
+    depends_on:
+      - kratos
+    ports:
+      - '4455:4455'
+      - '4456:4456'
+    command:
+      serve proxy -c /etc/config/oathkeeper/oathkeeper.yml
+    restart: on-failure
+    networks:
+      - intranet
+    volumes:
+      - ./config:/etc/config/oathkeeper
+
+networks:
+  intranet:
+    external: true
+
+volumes:
+  .docker:
+  config:
